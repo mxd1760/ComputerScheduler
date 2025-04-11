@@ -1,4 +1,4 @@
-package doucette.marcus.codewizcomputerscheduler.ComputerSelectorScreen
+package doucette.marcus.codewizcomputerscheduler.ui.ComputerSelectorScreen
 
 data class ComputerEntryData(
     val name:String,

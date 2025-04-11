@@ -11,16 +11,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import doucette.marcus.codewizcomputerscheduler.ComputerSelectorScreen.ComputerSelectorScreen
+import doucette.marcus.codewizcomputerscheduler.ui.ComputerSelectorScreen.ComputerSelectorScreen
+import doucette.marcus.codewizcomputerscheduler.ui.TimeSlotView.TimeSlotView
 import doucette.marcus.codewizcomputerscheduler.ui.theme.CodewizComputerSchedulerTheme
 
 class MainActivity : ComponentActivity() {
+    companion object{
+        const val LOG_TAG = "Computer_Scheduler"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             CodewizComputerSchedulerTheme {
-                ComputerSelectorScreen()
+                TimeSlotView()
             }
         }
     }

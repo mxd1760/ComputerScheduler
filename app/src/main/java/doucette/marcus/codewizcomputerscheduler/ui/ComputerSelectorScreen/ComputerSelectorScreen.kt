@@ -1,4 +1,4 @@
-package doucette.marcus.codewizcomputerscheduler.ComputerSelectorScreen
+package doucette.marcus.codewizcomputerscheduler.ui.ComputerSelectorScreen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +32,7 @@ fun ComputerSelectorScreen(modifier: Modifier = Modifier) {
 @Composable
 fun DumbComputerSelectorScreen(
     action:(ComputerSelectorScreenAction)->Unit,
-    state:ComputerSelectorScreenState,
+    state: ComputerSelectorScreenState,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -61,7 +61,7 @@ fun DumbComputerSelectorScreen(
 }
 
 @Composable
-fun ComputerEntry(data:ComputerEntryData,modifier: Modifier = Modifier) {
+fun ComputerEntry(data: ComputerEntryData, modifier: Modifier = Modifier) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier= modifier
