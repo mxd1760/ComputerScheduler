@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,9 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,8 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import doucette.marcus.codewizcomputerscheduler.data.DataService
-import doucette.marcus.codewizcomputerscheduler.data.Student
+import doucette.marcus.codewizcomputerscheduler.ui.NewEnrolmentPopup.NewEnrolmentPopup
 import doucette.marcus.codewizcomputerscheduler.ui.theme.CodewizComputerSchedulerTheme
 import java.time.DayOfWeek
 
@@ -65,7 +61,10 @@ fun TimeSlotView(modifier: Modifier = Modifier) {
 
 
 @Composable
-fun DumbTimeSlotView(action:(TimeSlotViewAction)->Unit,state:TimeSlotState,modifier: Modifier = Modifier) {
+fun DumbTimeSlotView(action:(TimeSlotViewAction)->Unit,
+                     state:TimeSlotState,
+                     modifier: Modifier = Modifier
+) {
     Scaffold(
         floatingActionButton = {
             OutlinedButton(
@@ -97,11 +96,23 @@ fun DumbTimeSlotView(action:(TimeSlotViewAction)->Unit,state:TimeSlotState,modif
             }
         }
     }
-
+    when(state.currentPopup){
+        TSPopupType.NONE -> {}
+        TSPopupType.NEW_ENROLLMENT -> {
+//            NewEnrolmentPopup(state.listState.firstVisibleItemIndex%state.timeSlots.size,
+//                {action(TimeSlotViewAction.ClosePopup)}
+//            )
+        }
+        TSPopupType.SETTINGS -> TODO()
+        TSPopupType.EDIT_ENROLMENT -> TODO()
+    }
 }
 
 @Composable
-fun CurrentTimeFooter(action: (TimeSlotViewAction) -> Unit, state:TimeSlotState, modifier: Modifier = Modifier) {
+fun CurrentTimeFooter(action: (TimeSlotViewAction) -> Unit,
+                      state:TimeSlotState,
+                      modifier: Modifier = Modifier
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier=modifier
@@ -132,7 +143,7 @@ fun CurrentTimeFooter(action: (TimeSlotViewAction) -> Unit, state:TimeSlotState,
         }
         val ts = state.timeSlots[state.listState.firstVisibleItemIndex%state.timeSlots.size]
         Text(
-            "${ts.day.toString().take(3)} ${ts.time}:00",
+            ts.LabelString(),
             textAlign= TextAlign.Center,
             fontSize = 40.sp,
             modifier=Modifier
@@ -161,7 +172,11 @@ fun CurrentTimeFooter(action: (TimeSlotViewAction) -> Unit, state:TimeSlotState,
 
 
 @Composable
-fun SingleClassView(action: (TimeSlotViewAction) -> Unit,index:Int, state: TimeSlotState, modifier: Modifier = Modifier) {
+fun SingleClassView(action: (TimeSlotViewAction) -> Unit,
+                    index:Int,
+                    state: TimeSlotState,
+                    modifier: Modifier = Modifier
+) {
     LazyColumn(
         modifier=modifier
             .fillMaxSize()
@@ -178,7 +193,8 @@ fun SingleClassView(action: (TimeSlotViewAction) -> Unit,index:Int, state: TimeS
 fun ClassEntryView(action: (TimeSlotViewAction) -> Unit,
                    index: Int,
                    student: StudentCard,
-                   modifier: Modifier = Modifier) {
+                   modifier: Modifier = Modifier
+) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier=modifier

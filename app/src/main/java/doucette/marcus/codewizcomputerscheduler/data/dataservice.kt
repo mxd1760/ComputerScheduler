@@ -1,6 +1,15 @@
 package doucette.marcus.codewizcomputerscheduler.data
 
 import android.util.Log
+import androidx.room.Dao
+import androidx.room.Database
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Insert
+import androidx.room.PrimaryKey
+import androidx.room.Query
+import androidx.room.Room
+import androidx.room.RoomDatabase
 import doucette.marcus.codewizcomputerscheduler.MainActivity
 import doucette.marcus.codewizcomputerscheduler.ui.TimeSlotView.StudentCard
 import doucette.marcus.codewizcomputerscheduler.ui.TimeSlotView.TimeSlotViewData
@@ -9,46 +18,109 @@ import java.time.DayOfWeek
 import java.util.UUID
 
 
+
+@Entity(tableName="time_slot")
 data class TimeSlot(
+    @PrimaryKey val id:UUID,
     val day: DayOfWeek,
     val timeOfDay: Byte,
-    val enrolments: MutableList<Enrolment>,
-    val classes: List<UUID>,
-)
+){
+    fun LabelString():String{
+        return "${day.toString().take(3)} ${timeOfDay}:00"
+    }
+}
 
+@Entity(tableName="cw_classes")
 data class CWClass( // recurring class
-    val id:UUID,
+    @PrimaryKey val id:UUID,
+    val timeSlotId:UUID,
     val subject:String,
-    val notes:String,
+    val notes:String = "",
     // TEACHER??
 )
 
 // class sessions???
 
 
+@Entity(tableName="enrolments", primaryKeys = ["studentId","classId"])
 data class Enrolment(
     val studentId:UUID,
     val classId:UUID,
     val computerId:UUID,
 )
 
+@Entity(tableName = "students")
 data class Student(
-    val id:UUID,
+    @PrimaryKey val id:UUID,
     val name:String,
 )
 
+@Entity(tableName="computers")
 data class Computer(
-    val id:UUID,
+    @PrimaryKey val id:UUID,
     val name:String,
-    val notes:String,
-    val flags:Int,
+    val notes:String = "",
+    val flags:Int = 0,
 )
+
+@Dao
+interface CCSDAO{
+    @Query("SELECT * FROM computers")
+    fun getAllComputers():List<Computer>
+
+    @Query("SELECT * FROM students")
+    fun getAllStudents():List<Student>
+
+    @Query("SELECT * FROM cw_classes")
+    fun getAllClasses():List<CWClass>
+
+    @Query("SELECT * FROM time_slot")
+    fun getAllTimeSlots():List<TimeSlot>
+
+    @Query("SELECT * FROM enrolments")
+    fun getAllEnrolments():List<Enrolment>
+
+    @Insert
+    fun insertComputer(comp:Computer)
+
+    @Insert
+    fun insertStudent(student:Student)
+
+    @Insert
+    fun insertClass(c:CWClass)
+
+    @Insert
+    fun insertTimeSlot(ts:TimeSlot)
+
+    @Insert
+    fun insertEnrolment(enr:Enrolment)
+
+    @Query("SELECT * FROM time_slot WHERE id=:id")
+    fun getTimeSlotById(id:UUID):TimeSlot
+
+    @Query("SELECT students.name AS name,cw_classes.subject AS subject,computers.name AS computer " +
+            "FROM students " +
+            "JOIN cw_classes,enrolments,computers " +
+            "ON cw_classes.TimeSlotId=:tsid " +
+            "AND enrolments.classId=cw_classes.id " +
+            "AND enrolments.studentId=students.id " +
+            "AND enrolments.computerId=computers.id ")
+    fun getStudentsAtTimeSlot(tsid:UUID):List<StudentCard>
+}
+
+@Database(entities=arrayOf(Computer::class,Student::class,CWClass::class,Enrolment::class,TimeSlot::class),version=1)
+abstract class AppDatabase:RoomDatabase(){
+    abstract fun dao():CCSDAO
+}
+
+
 
 class DataService() {
-    private val timeSlots:MutableList<TimeSlot> = mutableListOf()
-    private val classes:MutableMap<UUID,CWClass> = mutableMapOf()
-    private val students:MutableMap<UUID,Student> = mutableMapOf()
-    private val computers:MutableMap<UUID,Computer> = mutableMapOf()
+//    private val timeSlots:MutableList<TimeSlot> = mutableListOf()
+//    private val classes:MutableMap<UUID,CWClass> = mutableMapOf()
+//    private val students:MutableMap<UUID,Student> = mutableMapOf()
+//    private val computers:MutableMap<UUID,Computer> = mutableMapOf()
+    private val dao:CCSDAO
     companion object{
         val NOT_NEEDED = UUID.nameUUIDFromBytes("not needed".toByteArray())
         val PERSONAL = UUID.nameUUIDFromBytes("personal".toByteArray())
@@ -60,27 +132,83 @@ class DataService() {
             return instance as DataService
         }
     }
-
+//
     init {
-        loadMocks()
+        val db = Room.databaseBuilder(MainActivity.getAppContext(),AppDatabase::class.java,"ccs-db").build()
+        dao = db.dao();
+        //loadMocks()
     }
-
-    fun addEnrolments(enrolments:List<Enrolment>){
-        timeSlots.forEach{timeSlot->
-            timeSlot.enrolments.addAll(enrolments.filter{enrolment->
-                timeSlot.classes.contains(enrolment.classId)
-            })
+//
+//    fun addEnrolments(enrolments:List<Enrolment>){
+//        timeSlots.forEach{timeSlot->
+//            timeSlot.enrolments.addAll(enrolments.filter{enrolment->
+//                timeSlot.classes.contains(enrolment.classId)
+//            })
+//        }
+//    }
+//
+//
+//
+//
+    fun getTimeSlotViewData():List<TimeSlotViewData>{
+        val data = dao.getAllTimeSlots().map{timeSlot->
+            TimeSlotViewData(
+                day = timeSlot.day,
+                time = timeSlot.timeOfDay.toInt(),
+                students = dao.getStudentsAtTimeSlot(timeSlot.id)
+            )
         }
+        //Log.d(MainActivity.LOG_TAG, data.toString())
+        return data
     }
-
-    //TODO remove in release builds
-    private fun loadMocks(){
-        mockComputers()
-        mockClasses()
-        mockTimeSlots()
-        mockStudentsAndEnrolments()
+//
+    fun getTimeSlot(id:UUID):TimeSlot{
+        return dao.getTimeSlotById(id)
     }
+//
+//    fun getStudentsFromEnrolments(enrolments: List<Enrolment>):List<StudentCard>{
+//        return enrolments.map{enrolment->
+//            StudentCard(
+//                name = students[enrolment.studentId]?.name?:"ERROR",
+//                subject = classes[enrolment.classId]?.subject?:"ERROR",
+//                computer = computers[enrolment.computerId]?.name?:"ERROR"
+//            )
+//        }
+//    }
+//
+//    fun getStudents():List<Student>{
+//        return students.values.toList()
+//    }
+//
+//    fun loadData(){
+//
+//    }
+//
+//    fun saveData(){
+//
+//    }
+//
+//    fun getTodaysClasses(){
+//
+//    }
+//
+//    fun getFreeComputersForClass(){
+//
+//    }
 
+}
+
+
+class Mocks{
+//    TODO remove in release builds
+//    private fun loadMocks(){
+//        mockComputers()
+//        mockClasses()
+//        mockTimeSlots()
+//        mockStudentsAndEnrolments()
+//    }
+
+    /**
     private fun mockComputers(){
         computers.clear()
         for(i in 0..30){
@@ -95,8 +223,9 @@ class DataService() {
                 )
             )
         }
-    }
+    }**/
 
+    /**
     private fun mockClasses(){
         classes.clear()
         val thuRoblox = CWClass(
@@ -148,7 +277,9 @@ class DataService() {
         classes.put(wedGodot.id,wedGodot)
         classes.put(tueRoblox.id,tueRoblox)
     }
+    */
 
+    /**
     private fun mockTimeSlots(){
         timeSlots.clear()
         val ts1 = TimeSlot(
@@ -201,8 +332,9 @@ class DataService() {
         timeSlots.add(ts5)
         timeSlots.add(ts6)
         timeSlots.add(ts7)
-    }
+    }*/
 
+    /*
     private fun mockStudentsAndEnrolments(){
         students.clear()
         //enrolments.clear()
@@ -424,47 +556,7 @@ class DataService() {
             enrolment21, enrolment22
         )
         addEnrolments(enrols)
-    }
-
-
-    fun getTimeSlotViewData():List<TimeSlotViewData>{
-        val data = timeSlots.toList().map{timeSlot->
-            TimeSlotViewData(
-                day = timeSlot.day,
-                time = timeSlot.timeOfDay.toInt(),
-                students = getStudentsFromEnrolments(timeSlot.enrolments)
-            )
-        }
-        //Log.d(MainActivity.LOG_TAG, data.toString())
-        return data
-    }
-
-    fun getStudentsFromEnrolments(enrolments: List<Enrolment>):List<StudentCard>{
-        return enrolments.map{enrolment->
-            StudentCard(
-                name = students[enrolment.studentId]?.name?:"ERROR",
-                subject = classes[enrolment.classId]?.subject?:"ERROR",
-                computer = computers[enrolment.computerId]?.name?:"ERROR"
-            )
-        }
-    }
-
-    fun loadData(){
-
-    }
-
-    fun saveData(){
-
-    }
-
-    fun getTodaysClasses(){
-
-    }
-
-    fun getFreeComputersForClass(){
-
-    }
-
+    }*/
 }
 
 
