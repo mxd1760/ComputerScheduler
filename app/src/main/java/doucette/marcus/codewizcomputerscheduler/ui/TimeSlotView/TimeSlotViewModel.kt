@@ -4,6 +4,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import doucette.marcus.codewizcomputerscheduler.data.DataService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -22,6 +23,7 @@ enum class TSPopupType{
     NEW_ENROLLMENT,
     SETTINGS,
     EDIT_ENROLMENT,
+    NEW_TIME_SLOT,
 }
 
 data class TimeSlotViewData(
@@ -47,12 +49,25 @@ sealed interface TimeSlotViewAction{
     data object AddStudent: TimeSlotViewAction
     data class EditStudent(val index:Int):TimeSlotViewAction
     data object ClosePopup:TimeSlotViewAction
+    data object OpenNewTimeSlotPopup : TimeSlotViewAction
+
+    data class AddTimeSlot(val day:DayOfWeek,val time:Int):TimeSlotViewAction
 }
 
 class TimeSlotViewModel: ViewModel() {
     val ds = DataService.get()
-    private val _state = MutableStateFlow(TimeSlotState(ds.getTimeSlotViewData()))
+    private val _state = MutableStateFlow(TimeSlotState(emptyList()))
     val state = _state.asStateFlow()
+
+    init {
+        viewModelScope.launch(Dispatchers.IO){
+            _state.update { old->
+                old.copy(
+                    timeSlots = ds.getTimeSlotViewData()
+                )
+            }
+        }
+    }
 
     fun ActionHandler(action: TimeSlotViewAction){
         when(action){
@@ -80,6 +95,23 @@ class TimeSlotViewModel: ViewModel() {
             }
 
             is TimeSlotViewAction.EditStudent -> TODO()
+            is TimeSlotViewAction.AddTimeSlot ->{
+                viewModelScope.launch(Dispatchers.IO){
+                    ds.CreateTimeSlot(action.day,action.time)
+                    _state.update { old->
+                        old.copy(
+                            timeSlots = ds.getTimeSlotViewData()
+                        )
+                    }
+                }
+            }
+            TimeSlotViewAction.OpenNewTimeSlotPopup ->{
+                _state.update { old->
+                    old.copy(
+                        currentPopup = TSPopupType.NEW_TIME_SLOT
+                    )
+                }
+            }
         }
     }
 }

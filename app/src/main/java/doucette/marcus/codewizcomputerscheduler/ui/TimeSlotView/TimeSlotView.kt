@@ -1,7 +1,9 @@
 package doucette.marcus.codewizcomputerscheduler.ui.TimeSlotView
 
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import doucette.marcus.codewizcomputerscheduler.ui.NewEnrolmentPopup.NewEnrolmentPopup
 import doucette.marcus.codewizcomputerscheduler.ui.theme.CodewizComputerSchedulerTheme
 import java.time.DayOfWeek
 
@@ -90,7 +91,7 @@ fun DumbTimeSlotView(action:(TimeSlotViewAction)->Unit,
             flingBehavior = rememberSnapFlingBehavior(lazyListState = state.listState)
         ) {
             items(Int.MAX_VALUE){
-                val index=it%state.timeSlots.size
+                val index=if (state.timeSlots.size==0) {0} else {it%state.timeSlots.size}
                 SingleClassView(action,index,state)
                 VerticalDivider(modifier=Modifier.fillMaxHeight())
             }
@@ -105,9 +106,11 @@ fun DumbTimeSlotView(action:(TimeSlotViewAction)->Unit,
         }
         TSPopupType.SETTINGS -> TODO()
         TSPopupType.EDIT_ENROLMENT -> TODO()
+        TSPopupType.NEW_TIME_SLOT -> TimeSlotSelectorPopup(action,state)
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CurrentTimeFooter(action: (TimeSlotViewAction) -> Unit,
                       state:TimeSlotState,
@@ -141,13 +144,21 @@ fun CurrentTimeFooter(action: (TimeSlotViewAction) -> Unit,
                 modifier=Modifier.fillMaxHeight()
             )
         }
-        val ts = state.timeSlots[state.listState.firstVisibleItemIndex%state.timeSlots.size]
+        val ts = if (state.timeSlots.size == 0){
+            "Click Me"
+        } else {
+            state.timeSlots[state.listState.firstVisibleItemIndex%state.timeSlots.size].LabelString()
+        }
         Text(
-            ts.LabelString(),
+            ts,
             textAlign= TextAlign.Center,
             fontSize = 40.sp,
             modifier=Modifier
                 .weight(1f)
+
+                .combinedClickable {
+                    action(TimeSlotViewAction.OpenNewTimeSlotPopup)
+                }
         )
         OutlinedButton (
             onClick={action(TimeSlotViewAction
@@ -182,9 +193,10 @@ fun SingleClassView(action: (TimeSlotViewAction) -> Unit,
             .fillMaxSize()
             .width(LocalConfiguration.current.screenWidthDp.dp)
     ){
-
-        items(state.timeSlots[index].students){student->
-            ClassEntryView(action,index,student)
+        if (state.timeSlots.size>0) {
+            items(state.timeSlots[index].students) { student ->
+                ClassEntryView(action, index, student)
+            }
         }
     }
 }

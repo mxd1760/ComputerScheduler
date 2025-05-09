@@ -1,6 +1,8 @@
 package doucette.marcus.codewizcomputerscheduler.data
 
+import android.content.Context
 import android.util.Log
+import androidx.compose.runtime.currentRecomposeScope
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -25,6 +27,9 @@ data class TimeSlot(
     val day: DayOfWeek,
     val timeOfDay: Byte,
 ){
+    companion object{
+        val NONE = TimeSlot(UUID.nameUUIDFromBytes("NONE".toByteArray()),DayOfWeek.MONDAY, 0)
+    }
     fun LabelString():String{
         return "${day.toString().take(3)} ${timeOfDay}:00"
     }
@@ -96,7 +101,10 @@ interface CCSDAO{
     fun insertEnrolment(enr:Enrolment)
 
     @Query("SELECT * FROM time_slot WHERE id=:id")
-    fun getTimeSlotById(id:UUID):TimeSlot
+    fun getTimeSlotById(id:UUID):TimeSlot?
+
+    @Query("SELECT * from time_slot WHERE day=:day AND timeOfDay=:time")
+    fun getTimeSlotByValues(day: DayOfWeek,time:Byte):TimeSlot?
 
     @Query("SELECT students.name AS name,cw_classes.subject AS subject,computers.name AS computer " +
             "FROM students " +
@@ -151,6 +159,7 @@ class DataService() {
 //
 //
     fun getTimeSlotViewData():List<TimeSlotViewData>{
+
         val data = dao.getAllTimeSlots().map{timeSlot->
             TimeSlotViewData(
                 day = timeSlot.day,
@@ -163,7 +172,14 @@ class DataService() {
     }
 //
     fun getTimeSlot(id:UUID):TimeSlot{
-        return dao.getTimeSlotById(id)
+        return dao.getTimeSlotById(id)?:TimeSlot.NONE
+    }
+
+    fun CreateTimeSlot(day:DayOfWeek,time:Int){
+        if (dao.getTimeSlotByValues(day,time.toByte())==null){
+           dao.insertTimeSlot(TimeSlot(UUID.randomUUID(),day,time.toByte()))
+        }
+
     }
 //
 //    fun getStudentsFromEnrolments(enrolments: List<Enrolment>):List<StudentCard>{

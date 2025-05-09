@@ -10,6 +10,7 @@ import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.time.DayOfWeek
 import java.util.UUID
 
 data class NewEnrolmentState(
