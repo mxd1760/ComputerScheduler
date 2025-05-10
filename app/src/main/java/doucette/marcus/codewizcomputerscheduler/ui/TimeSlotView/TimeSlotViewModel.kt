@@ -4,6 +4,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import doucette.marcus.codewizcomputerscheduler.data.DataService
+import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,12 +28,11 @@ enum class TSPopupType{
 }
 
 data class TimeSlotViewData(
-    val day:DayOfWeek,
-    val time:Int,
+    val timeSlot:TimeSlot,
     val students:List<StudentCard>
 ){
     fun LabelString():String{
-        return "${day.toString().take(3)} ${time}:00"
+        return "${timeSlot.day.toString().take(3)} ${timeSlot.timeOfDay}:00"
     }
 }
 
@@ -97,7 +97,7 @@ class TimeSlotViewModel: ViewModel() {
             is TimeSlotViewAction.EditStudent -> TODO()
             is TimeSlotViewAction.AddTimeSlot ->{
                 viewModelScope.launch(Dispatchers.IO){
-                    ds.CreateTimeSlot(action.day,action.time)
+                    ds.createTimeSlot(action.day,action.time)
                     _state.update { old->
                         old.copy(
                             timeSlots = ds.getTimeSlotViewData()

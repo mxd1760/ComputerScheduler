@@ -47,8 +47,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
+import doucette.marcus.codewizcomputerscheduler.ui.NewEnrolmentPopup.NewEnrolmentPopup
 import doucette.marcus.codewizcomputerscheduler.ui.theme.CodewizComputerSchedulerTheme
 import java.time.DayOfWeek
+import java.util.UUID
 
 
 @Composable
@@ -100,9 +103,9 @@ fun DumbTimeSlotView(action:(TimeSlotViewAction)->Unit,
     when(state.currentPopup){
         TSPopupType.NONE -> {}
         TSPopupType.NEW_ENROLLMENT -> {
-//            NewEnrolmentPopup(state.listState.firstVisibleItemIndex%state.timeSlots.size,
-//                {action(TimeSlotViewAction.ClosePopup)}
-//            )
+            NewEnrolmentPopup(state.timeSlots[state.listState.firstVisibleItemIndex%state.timeSlots.size].timeSlot.id,
+                {action(TimeSlotViewAction.ClosePopup)}
+            )
         }
         TSPopupType.SETTINGS -> TODO()
         TSPopupType.EDIT_ENROLMENT -> TODO()
@@ -248,8 +251,11 @@ private fun ClassPreview() {
         DumbTimeSlotView({},TimeSlotState(
             listOf(
                 TimeSlotViewData(
-                    day=DayOfWeek.MONDAY,
-                    time=16,
+                    timeSlot= TimeSlot(
+                        UUID.randomUUID(),
+                        DayOfWeek.MONDAY,
+                        16
+                    ),
                     students=listOf(
                         StudentCard(
                             name = "Billy",
@@ -269,8 +275,11 @@ private fun ClassPreview() {
                     )
                 ),
                 TimeSlotViewData(
-                    day=DayOfWeek.TUESDAY,
-                    time=16,
+                    timeSlot= TimeSlot(
+                        UUID.randomUUID(),
+                        DayOfWeek.TUESDAY,
+                        16
+                    ),
                     students=listOf(
                         StudentCard(
                             name="Morty",
@@ -291,8 +300,11 @@ private fun ClassPreview() {
 
                 ),
                 TimeSlotViewData(
-                    day=DayOfWeek.TUESDAY,
-                    time=17,
+                    timeSlot= TimeSlot(
+                        UUID.randomUUID(),
+                        DayOfWeek.TUESDAY,
+                        17
+                    ),
                     students = listOf(
                         StudentCard(
                             name="Marinette",

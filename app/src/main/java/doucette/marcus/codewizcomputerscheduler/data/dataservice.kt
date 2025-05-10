@@ -1,24 +1,20 @@
 package doucette.marcus.codewizcomputerscheduler.data
 
-import android.content.Context
-import android.util.Log
-import androidx.compose.runtime.currentRecomposeScope
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import doucette.marcus.codewizcomputerscheduler.MainActivity
+import doucette.marcus.codewizcomputerscheduler.ui.NewEnrolmentPopup.ComputerAvailability
+import doucette.marcus.codewizcomputerscheduler.ui.NewEnrolmentPopup.FormattedComputer
 import doucette.marcus.codewizcomputerscheduler.ui.TimeSlotView.StudentCard
 import doucette.marcus.codewizcomputerscheduler.ui.TimeSlotView.TimeSlotViewData
-import java.sql.Time
 import java.time.DayOfWeek
 import java.util.UUID
-
 
 
 @Entity(tableName="time_slot")
@@ -106,14 +102,24 @@ interface CCSDAO{
     @Query("SELECT * from time_slot WHERE day=:day AND timeOfDay=:time")
     fun getTimeSlotByValues(day: DayOfWeek,time:Byte):TimeSlot?
 
-    @Query("SELECT students.name AS name,cw_classes.subject AS subject,computers.name AS computer " +
+    @Query("SELECT students.name AS name, cw_classes.subject AS subject,computers.name AS computer " +
             "FROM students " +
             "JOIN cw_classes,enrolments,computers " +
             "ON cw_classes.TimeSlotId=:tsid " +
             "AND enrolments.classId=cw_classes.id " +
             "AND enrolments.studentId=students.id " +
-            "AND enrolments.computerId=computers.id ")
+            "AND enrolments.computerId=computers.id;")
     fun getStudentsAtTimeSlot(tsid:UUID):List<StudentCard>
+
+    @Query("SELECT computers.id, computers.name,computers.notes, computers.flags FROM computers " +
+            "INNER JOIN cw_classes,time_slot,enrolments " +
+            "ON time_slot.day=:day AND time_slot.timeOfDay=:time " +
+            "AND cw_classes.timeSlotId=time_slot.id AND enrolments.classId=cw_classes.id " +
+            "AND enrolments.computerId=computers.id;")
+    fun getComputersInTimeSlot(day:DayOfWeek,time:Byte):List<Computer>
+
+    @Query("SELECT cw_classes.id, cw_classes.timeSlotId,cw_classes.subject, cw_classes.notes FROM cw_classes WHERE cw_classes.timeSlotId=:tsid")
+    fun getClassesInTimeSlot(tsid:UUID):List<CWClass>
 }
 
 @Database(entities=arrayOf(Computer::class,Student::class,CWClass::class,Enrolment::class,TimeSlot::class),version=1)
@@ -162,8 +168,7 @@ class DataService() {
 
         val data = dao.getAllTimeSlots().map{timeSlot->
             TimeSlotViewData(
-                day = timeSlot.day,
-                time = timeSlot.timeOfDay.toInt(),
+                timeSlot=timeSlot,
                 students = dao.getStudentsAtTimeSlot(timeSlot.id)
             )
         }
@@ -175,11 +180,46 @@ class DataService() {
         return dao.getTimeSlotById(id)?:TimeSlot.NONE
     }
 
-    fun CreateTimeSlot(day:DayOfWeek,time:Int){
+    fun createTimeSlot(day:DayOfWeek, time:Int){
         if (dao.getTimeSlotByValues(day,time.toByte())==null){
            dao.insertTimeSlot(TimeSlot(UUID.randomUUID(),day,time.toByte()))
         }
+    }
 
+    fun createClass(timeSlotId: UUID,subjectName:String){
+        dao.insertClass(CWClass(UUID.randomUUID(),timeSlotId,subjectName,""))
+    }
+
+    fun getFormattedComputers(timeSlotId:UUID):List<FormattedComputer>{
+        val ts = dao.getTimeSlotById(id = timeSlotId)?:run{
+            return listOf()
+        }
+        val current = dao.getComputersInTimeSlot(ts.day,ts.timeOfDay)
+        val adjacent = dao.getComputersInTimeSlot(ts.day,(ts.timeOfDay+1).toByte()) + dao.getComputersInTimeSlot(ts.day,(ts.timeOfDay-1).toByte())
+        val remaining = dao.getAllComputers().filter{
+            !(current.contains(it) || adjacent.contains(it))
+        }
+        var out:MutableList<FormattedComputer> = mutableListOf()
+        out.addAll(remaining.map{FormattedComputer(it.id,it.name,ComputerAvailability.Free) })
+        out.addAll(adjacent.map{ FormattedComputer(it.id,it.name,ComputerAvailability.Adjacent) })
+        out.addAll(current.map{ FormattedComputer(it.id,it.name,ComputerAvailability.Taken) })
+        return out.toList()
+    }
+
+    fun getClassesForTimeSlot(timeSlotId:UUID):List<CWClass>{
+        return dao.getClassesInTimeSlot(timeSlotId)
+    }
+
+    fun createComputer(name:String){
+        dao.insertComputer(Computer(UUID.randomUUID(),name))
+    }
+
+    fun createStudent(name:String){
+        dao.insertStudent(Student(UUID.randomUUID(),name))
+    }
+
+    fun getAllStudents():List<Student>{
+        return dao.getAllStudents()
     }
 //
 //    fun getStudentsFromEnrolments(enrolments: List<Enrolment>):List<StudentCard>{

@@ -2,67 +2,131 @@ package doucette.marcus.codewizcomputerscheduler.ui.NewEnrolmentPopup
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import doucette.marcus.codewizcomputerscheduler.data.CWClass
-import doucette.marcus.codewizcomputerscheduler.data.Computer
 import doucette.marcus.codewizcomputerscheduler.data.DataService
 import doucette.marcus.codewizcomputerscheduler.data.Student
 import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.time.DayOfWeek
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 data class NewEnrolmentState(
     val timeSlot:TimeSlot,
     val student: Student? = null,
-    val computer: Computer? = null,
-    val subject: CWClass? = null,
-    val activePicker: EnrolmentPicker = EnrolmentPicker.None
+    val allStudents:List<Student> = listOf(),
+    val computer: FormattedComputer? = null,
+    val relevantComputers:List<FormattedComputer> = listOf(),
+    val currentClass: CWClass? = null,
+    val allClasses: List<CWClass> = listOf(),
 )
 
-enum class EnrolmentPicker{
-    None,
-    Student,
-    Computer,
-    Subject
+
+enum class ComputerAvailability {
+    Free,
+    Taken,
+    Adjacent
 }
 
-class NewEnrolmentViewModelFactory(private val timeSlotId: UUID, private val closePopup:()->Unit):
-    ViewModelProvider.NewInstanceFactory(){
-        val timeSlot = DataService.get().getTimeSlot(timeSlotId)
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = NewEnrolmentViewModel(timeSlot,closePopup) as T
+data class FormattedComputer(
+    val computerId:UUID,
+    val name:String,
+    val availability:ComputerAvailability
+)
+
+
+class NewEnrolmentViewModelFactory(private val timeSlotId: UUID, private val closePopup:()->Unit): ViewModelProvider.NewInstanceFactory(){
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = NewEnrolmentViewModel(timeSlotId,closePopup) as T
 }
 
 sealed interface NewEnrolmentAction{
     data class ChangeStudent(val newStudent:Student):NewEnrolmentAction
-    data class ChangeComputer(val newComputer:Computer):NewEnrolmentAction
+    data class ChangeComputer(val newComputer: FormattedComputer):NewEnrolmentAction
     data class ChangeClass(val newClass:CWClass):NewEnrolmentAction
     data object Submit:NewEnrolmentAction
     data object Cancel:NewEnrolmentAction
-    data class ChangeSelectionScreen(val newScreen:EnrolmentPicker):NewEnrolmentAction
+    data class CreateStudent(val studentName:String):NewEnrolmentAction
+    data class CreateComputer(val computerName:String):NewEnrolmentAction
+    data class CreateClass(val subjectName:String):NewEnrolmentAction
 }
 
 
-class NewEnrolmentViewModel(timeSlot: TimeSlot,private val cancelAction:()->Unit): ViewModel(){
+class NewEnrolmentViewModel(timeSlotId:UUID,private val cancelAction:()->Unit): ViewModel(){
 
-    private val _state = MutableStateFlow(NewEnrolmentState(timeSlot = timeSlot))
+    private val _state = MutableStateFlow(NewEnrolmentState(timeSlot = TimeSlot.NONE))
     val state = _state.asStateFlow()
+
+    init{
+        viewModelScope.launch(Dispatchers.IO){
+            _state.update {old->
+                old.copy(
+                    timeSlot = DataService.get().getTimeSlot(timeSlotId),
+                    allStudents = DataService.get().getAllStudents(),
+                    allClasses = DataService.get().getClassesForTimeSlot(timeSlotId),
+                    relevantComputers = DataService.get().getFormattedComputers(timeSlotId)
+                )
+            }
+        }
+    }
 
     fun ActionHandler(action:NewEnrolmentAction){
         when(action){
             NewEnrolmentAction.Cancel -> {
                 cancelAction()
             }
-            is NewEnrolmentAction.ChangeClass -> TODO()
-            is NewEnrolmentAction.ChangeComputer -> TODO()
-            is NewEnrolmentAction.ChangeStudent -> TODO()
-            NewEnrolmentAction.Submit -> TODO()
-            is NewEnrolmentAction.ChangeSelectionScreen -> {
-                _state.update {old->
-                    old.copy(
-                        activePicker = action.newScreen
+            is NewEnrolmentAction.ChangeClass -> {
+                _state.update {
+                    it.copy(
+                        currentClass = action.newClass
                     )
+                }
+            }
+            is NewEnrolmentAction.ChangeComputer ->{
+                _state.update {
+                    it.copy(
+                        computer = action.newComputer
+                    )
+                }
+            }
+            is NewEnrolmentAction.ChangeStudent -> {
+                _state.update{
+                    it.copy(
+                        student = action.newStudent
+                    )
+                }
+            }
+            NewEnrolmentAction.Submit -> TODO()
+            is NewEnrolmentAction.CreateClass -> {
+                viewModelScope.launch(Dispatchers.IO) {
+                    DataService.get().createClass(_state.value.timeSlot.id,action.subjectName)
+                    _state.update {old->
+                        old.copy(
+                            allClasses = DataService.get().getClassesForTimeSlot(_state.value.timeSlot.id)
+                        )
+                    }
+                }
+            }
+            is NewEnrolmentAction.CreateComputer -> {
+                viewModelScope.launch(Dispatchers.IO){
+                    DataService.get().createComputer(action.computerName)
+                    _state.update{old->
+                        old.copy(
+                            relevantComputers = DataService.get().getFormattedComputers(_state.value.timeSlot.id)
+                        )
+                    }
+                }
+            }
+            is NewEnrolmentAction.CreateStudent -> {
+                viewModelScope.launch(Dispatchers.IO){
+                    DataService.get().createStudent(action.studentName)
+                    _state.update{old->
+                        old.copy(
+                            allStudents = DataService.get().getAllStudents()
+                        )
+                    }
                 }
             }
         }
