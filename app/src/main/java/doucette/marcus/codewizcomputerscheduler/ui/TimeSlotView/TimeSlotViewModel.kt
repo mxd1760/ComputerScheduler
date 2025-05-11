@@ -79,10 +79,13 @@ class TimeSlotViewModel: ViewModel() {
                 }
             }
             TimeSlotViewAction.ClosePopup -> {
-                _state.update { old->
-                    old.copy(
-                        currentPopup = TSPopupType.NONE
-                    )
+                viewModelScope.launch(Dispatchers.IO){
+                    _state.update { old->
+                        old.copy(
+                            timeSlots = ds.getTimeSlotViewData(),
+                            currentPopup = TSPopupType.NONE
+                        )
+                    }
                 }
             }
             TimeSlotViewAction.OpenSettings -> {

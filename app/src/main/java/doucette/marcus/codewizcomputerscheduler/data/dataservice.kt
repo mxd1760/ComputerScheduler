@@ -109,7 +109,7 @@ interface CCSDAO{
             "AND enrolments.classId=cw_classes.id " +
             "AND enrolments.studentId=students.id " +
             "AND enrolments.computerId=computers.id;")
-    fun getStudentsAtTimeSlot(tsid:UUID):List<StudentCard>
+    fun getEnrollmentsAtTimeSlot(tsid:UUID):List<StudentCard>
 
     @Query("SELECT computers.id, computers.name,computers.notes, computers.flags FROM computers " +
             "INNER JOIN cw_classes,time_slot,enrolments " +
@@ -120,6 +120,14 @@ interface CCSDAO{
 
     @Query("SELECT cw_classes.id, cw_classes.timeSlotId,cw_classes.subject, cw_classes.notes FROM cw_classes WHERE cw_classes.timeSlotId=:tsid")
     fun getClassesInTimeSlot(tsid:UUID):List<CWClass>
+
+    @Query("SELECT students.* FROM students " +
+            "WHERE students.id NOT IN " +
+            "(SELECT enrolments.studentId FROM enrolments " +
+            "INNER JOIN cw_classes WHERE " +
+            "enrolments.classId=cw_classes.id AND " +
+            "cw_classes.timeSlotId=:timeSlotId); ")
+    fun getAllStudentsNotAtTimeslot(timeSlotId: UUID):List<Student>
 }
 
 @Database(entities=arrayOf(Computer::class,Student::class,CWClass::class,Enrolment::class,TimeSlot::class),version=1)
@@ -165,11 +173,10 @@ class DataService() {
 //
 //
     fun getTimeSlotViewData():List<TimeSlotViewData>{
-
         val data = dao.getAllTimeSlots().map{timeSlot->
             TimeSlotViewData(
                 timeSlot=timeSlot,
-                students = dao.getStudentsAtTimeSlot(timeSlot.id)
+                students = dao.getEnrollmentsAtTimeSlot(timeSlot.id)
             )
         }
         //Log.d(MainActivity.LOG_TAG, data.toString())
@@ -220,6 +227,14 @@ class DataService() {
 
     fun getAllStudents():List<Student>{
         return dao.getAllStudents()
+    }
+
+    fun getAllStudentsNotAlreadyEnrolledInTimeSlot(timeSlotId:UUID):List<Student>{
+        return dao.getAllStudentsNotAtTimeslot(timeSlotId)
+    }
+
+    fun addEnrollment(studentId: UUID,computerId: UUID,classId: UUID){
+        dao.insertEnrolment(Enrolment(studentId,classId,computerId))
     }
 //
 //    fun getStudentsFromEnrolments(enrolments: List<Enrolment>):List<StudentCard>{

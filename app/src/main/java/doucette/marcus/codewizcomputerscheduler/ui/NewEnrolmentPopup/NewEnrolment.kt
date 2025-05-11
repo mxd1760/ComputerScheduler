@@ -35,6 +35,8 @@ import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -42,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import java.util.UUID
@@ -95,11 +98,16 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                     state.student?.name,
                     state.allStudents.map{Pair(it.name,Color.Green)},
                     {action(NewEnrolmentAction.ChangeStudent(state.allStudents[it]))}
-                ){
+                ){ ret->
+
                     Dialog(
-                        onDismissRequest = it
+                        onDismissRequest = ret
                     ){
                         var name by remember{mutableStateOf("")}
+                        val submit = {
+                            action(NewEnrolmentAction.CreateStudent(name))
+                            ret()
+                        }
                         Column(
                             modifier=Modifier
                                 .size(height = 400.dp,width=250.dp)
@@ -113,17 +121,16 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                                 TextField(singleLine = true,
                                     value = name,
                                     onValueChange = {name=it},
-                                    modifier=Modifier.weight(1f))
+                                    modifier=Modifier.weight(1f),
+                                    keyboardActions = KeyboardActions(onDone={submit()}),
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done))
                             }
                             Spacer(modifier=Modifier.weight(1f))
                             Row{
-                                TextButton(onClick=it) {
+                                TextButton(onClick=ret) {
                                     Text("Cancel", color=Color.Red)
                                 }
-                                TextButton(onClick={
-                                    action(NewEnrolmentAction.CreateStudent(name))
-                                    it()
-                                }){
+                                TextButton(onClick=submit){
                                     Text("Submit", color=Color.Green)
                                 }
                             }
@@ -139,11 +146,15 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                             ComputerAvailability.Adjacent -> Color.Yellow
                         }
                     )},
-                    {action(NewEnrolmentAction.ChangeComputer(state.relevantComputers[it]))}){
+                    {action(NewEnrolmentAction.ChangeComputer(state.relevantComputers[it]))}){ret->
                     Dialog(
-                        onDismissRequest = it
+                        onDismissRequest = ret
                     ){
                         var name by remember{mutableStateOf("")}
+                        val submit = {
+                            action(NewEnrolmentAction.CreateComputer(name))
+                            ret()
+                        }
                         Column(
                             modifier=Modifier
                                 .size(height = 400.dp,width=250.dp)
@@ -157,17 +168,17 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                                 TextField(singleLine = true,
                                     value = name,
                                     onValueChange = {name=it},
-                                    modifier=Modifier.weight(1f))
+                                    modifier=Modifier.weight(1f),
+                                    keyboardActions = KeyboardActions(onDone = {submit()}),
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                                )
                             }
                             Spacer(modifier=Modifier.weight(1f))
                             Row{
-                                TextButton(onClick=it) {
+                                TextButton(onClick=ret) {
                                     Text("Cancel", color=Color.Red)
                                 }
-                                TextButton(onClick={
-                                    action(NewEnrolmentAction.CreateComputer(name))
-                                    it()
-                                }){
+                                TextButton(onClick=submit){
                                     Text("Submit", color=Color.Green)
                                 }
                             }
@@ -177,11 +188,15 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                 ItemPicker("Class: ",
                     state.currentClass?.subject,
                     state.allClasses.map{Pair(it.subject,Color.Green)},
-                    {action(NewEnrolmentAction.ChangeClass(state.allClasses[it]))}){
+                    {action(NewEnrolmentAction.ChangeClass(state.allClasses[it]))}){ret->
                     Dialog(
-                        onDismissRequest = it
+                        onDismissRequest = ret
                     ){
                         var name by remember{mutableStateOf("")}
+                        val submit = {
+                            action(NewEnrolmentAction.CreateClass(name))
+                            ret()
+                        }
                         Column(
                             modifier=Modifier
                                 .size(height = 400.dp,width=250.dp)
@@ -195,17 +210,17 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                                 TextField(singleLine = true,
                                     value = name,
                                     onValueChange = {name=it},
-                                    modifier=Modifier.weight(1f))
+                                    modifier=Modifier.weight(1f),
+                                    keyboardActions = KeyboardActions(onDone = {submit()}),
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                                )
                             }
                             Spacer(modifier=Modifier.weight(1f))
                             Row{
-                                TextButton(onClick=it) {
+                                TextButton(onClick=ret) {
                                     Text("Cancel", color=Color.Red)
                                 }
-                                TextButton(onClick={
-                                    action(NewEnrolmentAction.CreateClass(name))
-                                    it()
-                                }){
+                                TextButton(onClick=submit){
                                     Text("Submit", color=Color.Green)
                                 }
                             }
@@ -232,7 +247,7 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                     Text("Cancel")
                 }
                 Button(
-                    onClick={},
+                    onClick={action(NewEnrolmentAction.Submit)},
                     colors=ButtonColors(
                         containerColor = Color.Green,
                         contentColor = Color.Black,
@@ -300,7 +315,7 @@ fun ItemPicker(text:String,
                horizontalAlignment = Alignment.CenterHorizontally
            ){
                LazyColumn(
-                   modifier=Modifier.weight(1f),
+                   modifier=Modifier.weight(1f).fillMaxWidth(),
                    horizontalAlignment = Alignment.CenterHorizontally
                ){
                    items(options.size){

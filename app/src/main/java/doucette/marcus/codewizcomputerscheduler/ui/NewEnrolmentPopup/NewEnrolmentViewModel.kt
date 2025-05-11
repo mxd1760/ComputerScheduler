@@ -64,7 +64,7 @@ class NewEnrolmentViewModel(timeSlotId:UUID,private val cancelAction:()->Unit): 
             _state.update {old->
                 old.copy(
                     timeSlot = DataService.get().getTimeSlot(timeSlotId),
-                    allStudents = DataService.get().getAllStudents(),
+                    allStudents = DataService.get().getAllStudentsNotAlreadyEnrolledInTimeSlot(timeSlotId),
                     allClasses = DataService.get().getClassesForTimeSlot(timeSlotId),
                     relevantComputers = DataService.get().getFormattedComputers(timeSlotId)
                 )
@@ -98,7 +98,16 @@ class NewEnrolmentViewModel(timeSlotId:UUID,private val cancelAction:()->Unit): 
                     )
                 }
             }
-            NewEnrolmentAction.Submit -> TODO()
+            NewEnrolmentAction.Submit -> {
+                viewModelScope.launch(Dispatchers.IO){
+                    val st = state.value.student?:run{ return@launch }
+                    val cmp = state.value.computer?:run{ return@launch }
+                    val cwc = state.value.currentClass?:run{ return@launch }
+                    DataService.get().addEnrollment(st.id,cmp.computerId,cwc.id)
+                    cancelAction()
+                }
+
+            }
             is NewEnrolmentAction.CreateClass -> {
                 viewModelScope.launch(Dispatchers.IO) {
                     DataService.get().createClass(_state.value.timeSlot.id,action.subjectName)
@@ -124,7 +133,7 @@ class NewEnrolmentViewModel(timeSlotId:UUID,private val cancelAction:()->Unit): 
                     DataService.get().createStudent(action.studentName)
                     _state.update{old->
                         old.copy(
-                            allStudents = DataService.get().getAllStudents()
+                            allStudents = DataService.get().getAllStudentsNotAlreadyEnrolledInTimeSlot(state.value.timeSlot.id),
                         )
                     }
                 }
