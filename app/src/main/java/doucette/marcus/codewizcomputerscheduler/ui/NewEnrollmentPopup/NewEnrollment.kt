@@ -1,4 +1,4 @@
-package doucette.marcus.codewizcomputerscheduler.ui.NewEnrolmentPopup
+package doucette.marcus.codewizcomputerscheduler.ui.NewEnrollmentPopup
 
 
 import androidx.compose.foundation.background
@@ -37,9 +37,10 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -53,6 +54,9 @@ import java.util.UUID
 @Composable
 fun NewEnrolmentPopup(tsId:UUID, closePopup:()->Unit,  modifier: Modifier = Modifier) {
     val vm:NewEnrolmentViewModel = viewModel(factory=NewEnrolmentViewModelFactory(tsId, closePopup))
+    LaunchedEffect(tsId){
+        vm.reaffirm(tsId,closePopup)
+    }
     val state by vm.state.collectAsStateWithLifecycle()
     DumbNewEnrolmentPopup(vm::ActionHandler,state,modifier=modifier)
 }

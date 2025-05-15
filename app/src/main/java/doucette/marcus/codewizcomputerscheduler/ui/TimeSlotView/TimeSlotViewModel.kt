@@ -4,6 +4,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import doucette.marcus.codewizcomputerscheduler.data.DataService
+import doucette.marcus.codewizcomputerscheduler.data.StudentCard
 import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +24,7 @@ enum class TSPopupType{
     NONE,
     NEW_ENROLLMENT,
     SETTINGS,
-    EDIT_ENROLMENT,
+    EDIT_ENROLLMENT,
     NEW_TIME_SLOT,
 }
 
@@ -36,11 +37,7 @@ data class TimeSlotViewData(
     }
 }
 
-data class StudentCard(
-    val name:String,
-    val subject:String,
-    val computer:String,
-)
+
 
 sealed interface TimeSlotViewAction{
 

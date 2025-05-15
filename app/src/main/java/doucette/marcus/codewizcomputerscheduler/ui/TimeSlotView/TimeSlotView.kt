@@ -47,8 +47,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import doucette.marcus.codewizcomputerscheduler.data.StudentCard
 import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
-import doucette.marcus.codewizcomputerscheduler.ui.NewEnrolmentPopup.NewEnrolmentPopup
+import doucette.marcus.codewizcomputerscheduler.ui.NewEnrollmentPopup.NewEnrolmentPopup
 import doucette.marcus.codewizcomputerscheduler.ui.theme.CodewizComputerSchedulerTheme
 import java.time.DayOfWeek
 import java.util.UUID
@@ -108,7 +109,7 @@ fun DumbTimeSlotView(action:(TimeSlotViewAction)->Unit,
             )
         }
         TSPopupType.SETTINGS -> TODO()
-        TSPopupType.EDIT_ENROLMENT -> TODO()
+        TSPopupType.EDIT_ENROLLMENT -> TODO()
         TSPopupType.NEW_TIME_SLOT -> TimeSlotSelectorPopup(action,state)
     }
 }
@@ -197,8 +198,9 @@ fun SingleClassView(action: (TimeSlotViewAction) -> Unit,
             .width(LocalConfiguration.current.screenWidthDp.dp)
     ){
         if (state.timeSlots.size>0) {
-            items(state.timeSlots[index].students) { student ->
-                ClassEntryView(action, index, student)
+            val students:List<StudentCard> = state.timeSlots[index].students
+            this.items(students){student ->
+                ClassEntryView(action, index, student )
             }
         }
     }
