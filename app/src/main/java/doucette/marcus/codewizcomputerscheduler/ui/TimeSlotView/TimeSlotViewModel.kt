@@ -49,6 +49,7 @@ sealed interface TimeSlotViewAction{
     data object OpenNewTimeSlotPopup : TimeSlotViewAction
 
     data class AddTimeSlot(val day:DayOfWeek,val time:Int):TimeSlotViewAction
+    data class DeleteTimeSlot(val timeSlotViewData: TimeSlotViewData) : TimeSlotViewAction
 }
 
 class TimeSlotViewModel: ViewModel() {
@@ -110,6 +111,16 @@ class TimeSlotViewModel: ViewModel() {
                     old.copy(
                         currentPopup = TSPopupType.NEW_TIME_SLOT
                     )
+                }
+            }
+            is TimeSlotViewAction.DeleteTimeSlot -> {
+                viewModelScope.launch(Dispatchers.IO) {
+                    ds.deleteTimeSlot(action.timeSlotViewData.timeSlot.id)
+                    _state.update { old ->
+                        old.copy(
+                            timeSlots = ds.getTimeSlotViewData()
+                        )
+                    }
                 }
             }
         }
