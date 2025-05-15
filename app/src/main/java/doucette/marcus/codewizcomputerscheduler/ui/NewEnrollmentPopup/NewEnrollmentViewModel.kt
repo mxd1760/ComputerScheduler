@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import doucette.marcus.codewizcomputerscheduler.data.CWClass
 import doucette.marcus.codewizcomputerscheduler.data.Computer
 import doucette.marcus.codewizcomputerscheduler.data.DataService
+import doucette.marcus.codewizcomputerscheduler.data.Enrolment
 import doucette.marcus.codewizcomputerscheduler.data.Student
 import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,15 +17,30 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-data class NewEnrolmentState(
+data class NewEnrollmentState(
     val timeSlot:TimeSlot,
+    val prev_enrollment: Enrolment?=null,
     val student: Student? = null,
-    val allStudents:List<Student> = listOf(),
     val computer: FormattedComputer? = null,
-    val relevantComputers:List<FormattedComputer> = listOf(),
     val currentClass: CWClass? = null,
+    val allStudents:List<Student> = listOf(),
+    val relevantComputers:List<FormattedComputer> = listOf(),
     val allClasses: List<CWClass> = listOf(),
-)
+){
+    companion object{
+        suspend fun from(timeSlot:TimeSlot,enrollment:Enrolment):NewEnrollmentState{
+            val ds = DataService.get()
+            val currentClass = ds.getClassFromId(enrollment.classId)
+            val student = ds.getStudentFromId(enrollment.studentId)
+            val computer = FormattedComputer.from(ds.getComputerFromId(enrollment.computerId))
+            return NewEnrollmentState(timeSlot, enrollment, student,computer,currentClass,
+                allStudents = DataService.get().getAllStudentsNotAlreadyEnrolledInTimeSlot(timeSlot.id),
+                allClasses = DataService.get().getClassesForTimeSlot(timeSlot.id),
+                relevantComputers = DataService.get().getFormattedComputers(timeSlot.id),
+                )
+        }
+    }
+}
 
 
 enum class ComputerAvailability {
@@ -38,37 +55,59 @@ data class FormattedComputer(
     val availability:ComputerAvailability
 ){
     companion object{
-        fun from(newComputer: Computer):FormattedComputer{
-            return FormattedComputer(newComputer.id,newComputer.name,ComputerAvailability.Free)
+        fun from(newComputer: Computer?):FormattedComputer?{
+            return newComputer?.let{cmp->
+                FormattedComputer(cmp.id,cmp.name,ComputerAvailability.Free)
+            }
         }
     }
 }
 
 
-class NewEnrolmentViewModelFactory(private val timeSlotId: UUID, private val closePopup:()->Unit): ViewModelProvider.NewInstanceFactory(){
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = NewEnrolmentViewModel(timeSlotId,closePopup) as T
+class NewEnrollmentViewModelFactory(private val timeSlotId: UUID, private val closePopup:()->Unit): ViewModelProvider.NewInstanceFactory(){
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = NewEnrollmentViewModel(timeSlotId,closePopup) as T
+}
+class EditEnrollmentViewModelFactory(val enrollment:Enrolment,val time_slot:TimeSlot,
+                                     private val closePopup:()->Unit):ViewModelProvider.NewInstanceFactory(){
+    override fun <T : ViewModel> create(modelClass:Class<T>):T = NewEnrollmentViewModel(
+        enrollment,time_slot,closePopup
+    ) as T
 }
 
-sealed interface NewEnrolmentAction{
-    data class ChangeStudent(val newStudent:Student):NewEnrolmentAction
-    data class ChangeComputer(val newComputer: FormattedComputer):NewEnrolmentAction
-    data class ChangeClass(val newClass:CWClass):NewEnrolmentAction
-    data object Submit:NewEnrolmentAction
-    data object Cancel:NewEnrolmentAction
-    data class CreateStudent(val studentName:String):NewEnrolmentAction
-    data class CreateComputer(val computerName:String):NewEnrolmentAction
-    data class CreateClass(val subjectName:String):NewEnrolmentAction
+sealed interface NewEnrollmentAction{
+    data class ChangeStudent(val newStudent:Student):NewEnrollmentAction
+    data class ChangeComputer(val newComputer: FormattedComputer):NewEnrollmentAction
+    data class ChangeClass(val newClass:CWClass):NewEnrollmentAction
+    data object Submit:NewEnrollmentAction
+    data object Cancel:NewEnrollmentAction
+    data class CreateStudent(val studentName:String):NewEnrollmentAction
+    data class CreateComputer(val computerName:String):NewEnrollmentAction
+    data class CreateClass(val subjectName:String):NewEnrollmentAction
 }
 
 
-class NewEnrolmentViewModel(private var timeSlotId:UUID, private var cancelAction:()->Unit): ViewModel(){
+class NewEnrollmentViewModel(): ViewModel(){
 
-    private val _state = MutableStateFlow(NewEnrolmentState(timeSlot = TimeSlot.NONE))
-    val state = _state.asStateFlow()
-
-    init{
+    constructor(id:UUID,action:()->Unit) : this() {
+        timeSlotId=id
+        cancelAction=action;
         reaffirm(timeSlotId,cancelAction)
     }
+    constructor(enrollment: Enrolment,timeSlot:TimeSlot,action:()->Unit) : this() {
+        viewModelScope.launch (Dispatchers.IO) {
+            timeSlotId = timeSlot.id
+            cancelAction = action
+            _state.update{
+                NewEnrollmentState.from(timeSlot,enrollment)
+            }
+        }
+    }
+
+    private lateinit var timeSlotId:UUID
+    private lateinit var cancelAction:()->Unit
+
+    private val _state = MutableStateFlow(NewEnrollmentState(timeSlot = TimeSlot.NONE))
+    val state = _state.asStateFlow()
 
     fun reaffirm(id:UUID, newAction:()->Unit){
         timeSlotId = id
@@ -77,7 +116,8 @@ class NewEnrolmentViewModel(private var timeSlotId:UUID, private var cancelActio
         viewModelScope.launch(Dispatchers.IO){
             _state.update {old->
                 old.copy(
-                    timeSlot = DataService.get().getTimeSlot(timeSlotId),
+                    timeSlot = DataService.get().getTimeSlotFromId(timeSlotId),
+                    prev_enrollment = null,
                     allStudents = DataService.get().getAllStudentsNotAlreadyEnrolledInTimeSlot(timeSlotId),
                     allClasses = DataService.get().getClassesForTimeSlot(timeSlotId),
                     relevantComputers = DataService.get().getFormattedComputers(timeSlotId),
@@ -88,45 +128,56 @@ class NewEnrolmentViewModel(private var timeSlotId:UUID, private var cancelActio
             }
         }
     }
+    fun reaffirm(enrollment:Enrolment,timeSlot:TimeSlot,newAction:()->Unit){
+        viewModelScope.launch(Dispatchers.IO) {
+            cancelAction= newAction
+            timeSlotId = timeSlot.id
+            _state.update{
+                NewEnrollmentState.from(timeSlot,enrollment)
+            }
+        }
+    }
 
 
-    fun ActionHandler(action:NewEnrolmentAction){
+    fun ActionHandler(action:NewEnrollmentAction){
         when(action){
-            NewEnrolmentAction.Cancel -> {
+            NewEnrollmentAction.Cancel -> {
                 cancelAction()
             }
-            is NewEnrolmentAction.ChangeClass -> {
+            is NewEnrollmentAction.ChangeClass -> {
                 _state.update {
                     it.copy(
                         currentClass = action.newClass
                     )
                 }
             }
-            is NewEnrolmentAction.ChangeComputer ->{
+            is NewEnrollmentAction.ChangeComputer ->{
                 _state.update {
                     it.copy(
                         computer = action.newComputer
                     )
                 }
             }
-            is NewEnrolmentAction.ChangeStudent -> {
+            is NewEnrollmentAction.ChangeStudent -> {
                 _state.update{
                     it.copy(
                         student = action.newStudent
                     )
                 }
             }
-            NewEnrolmentAction.Submit -> {
+            NewEnrollmentAction.Submit -> {
                 viewModelScope.launch(Dispatchers.IO){
+                    val ds = DataService.get()
+                    state.value.prev_enrollment?.let{pe->ds.deleteEnrollment(pe)}
                     val st = state.value.student?:run{ return@launch }
                     val cmp = state.value.computer?:run{ return@launch }
                     val cwc = state.value.currentClass?:run{ return@launch }
-                    DataService.get().addEnrollment(st.id,cmp.computerId,cwc.id)
+                    ds.addEnrollment(st.id,cmp.computerId,cwc.id)
                     cancelAction()
                 }
 
             }
-            is NewEnrolmentAction.CreateClass -> {
+            is NewEnrollmentAction.CreateClass -> {
                 viewModelScope.launch(Dispatchers.IO) {
                     val newClass = DataService.get().createClass(_state.value.timeSlot.id,action.subjectName)
                     _state.update {old->
@@ -137,7 +188,7 @@ class NewEnrolmentViewModel(private var timeSlotId:UUID, private var cancelActio
                     }
                 }
             }
-            is NewEnrolmentAction.CreateComputer -> {
+            is NewEnrollmentAction.CreateComputer -> {
                 viewModelScope.launch(Dispatchers.IO){
                     val newComputer:Computer = DataService.get().createComputer(action.computerName)
                     _state.update{old->
@@ -148,7 +199,7 @@ class NewEnrolmentViewModel(private var timeSlotId:UUID, private var cancelActio
                     }
                 }
             }
-            is NewEnrolmentAction.CreateStudent -> {
+            is NewEnrollmentAction.CreateStudent -> {
                 viewModelScope.launch(Dispatchers.IO){
                     val newStudent = DataService.get().createStudent(action.studentName)
                     _state.update{old->

@@ -47,9 +47,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import doucette.marcus.codewizcomputerscheduler.data.Enrolment
 import doucette.marcus.codewizcomputerscheduler.data.StudentCard
 import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
-import doucette.marcus.codewizcomputerscheduler.ui.NewEnrollmentPopup.NewEnrolmentPopup
+import doucette.marcus.codewizcomputerscheduler.ui.NewEnrollmentPopup.EditEnrollmentPopup
+import doucette.marcus.codewizcomputerscheduler.ui.NewEnrollmentPopup.NewEnrollmentPopup
 import doucette.marcus.codewizcomputerscheduler.ui.theme.CodewizComputerSchedulerTheme
 import java.time.DayOfWeek
 import java.util.UUID
@@ -104,12 +106,17 @@ fun DumbTimeSlotView(action:(TimeSlotViewAction)->Unit,
     when(state.currentPopup){
         TSPopupType.NONE -> {}
         TSPopupType.NEW_ENROLLMENT -> {
-            NewEnrolmentPopup(state.timeSlots[state.listState.firstVisibleItemIndex%state.timeSlots.size].timeSlot.id,
+            val current_time_slot_data = state.timeSlots[state.listState.firstVisibleItemIndex%state.timeSlots.size]
+            NewEnrollmentPopup(current_time_slot_data.timeSlot.id,
                 {action(TimeSlotViewAction.ClosePopup)}
             )
         }
         TSPopupType.SETTINGS -> TODO()
-        TSPopupType.EDIT_ENROLLMENT -> TODO()
+        TSPopupType.EDIT_ENROLLMENT -> {
+            val current_time_slot_data = state.timeSlots[state.listState.firstVisibleItemIndex%state.timeSlots.size]
+            val en = state.selectedEnrollment?:run{return}
+            EditEnrollmentPopup(en,current_time_slot_data.timeSlot,{action(TimeSlotViewAction.ClosePopup)})
+        }
         TSPopupType.NEW_TIME_SLOT -> TimeSlotSelectorPopup(action,state)
     }
 }
@@ -200,7 +207,7 @@ fun SingleClassView(action: (TimeSlotViewAction) -> Unit,
         if (state.timeSlots.size>0) {
             val students:List<StudentCard> = state.timeSlots[index].students
             this.items(students){student ->
-                ClassEntryView(action, index, student )
+                ClassEntryView(action,student)
             }
         }
     }
@@ -208,7 +215,6 @@ fun SingleClassView(action: (TimeSlotViewAction) -> Unit,
 
 @Composable
 fun ClassEntryView(action: (TimeSlotViewAction) -> Unit,
-                   index: Int,
                    student: StudentCard,
                    modifier: Modifier = Modifier
 ) {
@@ -228,7 +234,7 @@ fun ClassEntryView(action: (TimeSlotViewAction) -> Unit,
             Text("Computer: ${student.computer}")
         }
         Button(
-            onClick = {action(TimeSlotViewAction.EditStudent(index))},
+            onClick = {action(TimeSlotViewAction.EditStudent(student.enrollment))},
             colors = ButtonColors(
                 containerColor = Color.Gray,
                 contentColor = Color.Black,
@@ -263,16 +269,19 @@ private fun ClassPreview() {
                             name = "Billy",
                             subject = "Roblox",
                             computer = "Computer 15",
+                            enrollment = Enrolment.NONE
                         ),
                         StudentCard(
                             name="Mandy",
                             subject = "Minecraft Modding",
-                            computer = "Computer 3"
+                            computer = "Computer 3",
+                            enrollment = Enrolment.NONE
                         ),
                         StudentCard(
                             name="Grim",
                             subject = "Godot",
-                            computer = "Personal Computer"
+                            computer = "Personal Computer",
+                            enrollment = Enrolment.NONE
                         )
                     )
                 ),
@@ -287,16 +296,19 @@ private fun ClassPreview() {
                             name="Morty",
                             subject="Unity",
                             computer="computer 3",
+                            enrollment = Enrolment.NONE
                         ),
                         StudentCard(
                             name="Rick",
                             subject="Arduino",
                             computer="Personal Computer",
+                            enrollment = Enrolment.NONE
                         ),
                         StudentCard(
                             name="Summer",
                             subject="Lego Robotics",
                             computer="No Computer Needed",
+                            enrollment = Enrolment.NONE
                         )
                     )
 
@@ -311,22 +323,26 @@ private fun ClassPreview() {
                         StudentCard(
                             name="Marinette",
                             subject="3D Modeling",
-                            computer="Computer 12"
+                            computer="Computer 12",
+                            enrollment = Enrolment.NONE
                         ),
                         StudentCard(
                             name="Adrien",
                             subject="Godot",
-                            computer="Personal Computer"
+                            computer="Personal Computer",
+                            enrollment = Enrolment.NONE
                         ),
                         StudentCard(
                             name="Nino",
                             subject="Minecraft Modding",
                             computer="Computer 4",
+                            enrollment = Enrolment.NONE
                         ),
                         StudentCard(
                             name="Alya",
                             subject="Roblox",
-                            computer="Computer 5"
+                            computer="Computer 5",
+                            enrollment = Enrolment.NONE
                         )
                     )
                 )

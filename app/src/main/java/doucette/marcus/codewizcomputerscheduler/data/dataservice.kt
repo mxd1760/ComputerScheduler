@@ -1,13 +1,12 @@
 package doucette.marcus.codewizcomputerscheduler.data
 
-import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
+import androidx.room.Delete
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
-import androidx.room.RenameTable
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import doucette.marcus.codewizcomputerscheduler.MainActivity
@@ -47,7 +46,15 @@ data class Enrolment(
     val studentId:UUID,
     val classId:UUID,
     val computerId:UUID,
-)
+){
+    companion object{
+        val NONE = Enrolment(
+            studentId = UUID.nameUUIDFromBytes("NONE".toByteArray()),
+            classId = UUID.nameUUIDFromBytes("NONE".toByteArray()),
+            computerId = UUID.nameUUIDFromBytes("NONE".toByteArray())
+        )
+    }
+}
 
 @Entity(tableName = "student")
 data class Student(
@@ -68,6 +75,7 @@ data class StudentCard(
     val name:String,
     val subject:String,
     val computer:String,
+    val enrollment:Enrolment
 )
 
 @Dao
@@ -108,12 +116,11 @@ interface CCSDAO{
     @Query("SELECT * from time_slot WHERE day=:day AND timeOfDay=:time")
     fun getTimeSlotByValues(day: DayOfWeek,time:Byte):TimeSlot?
 
-    @Query("SELECT student.name AS name, cw_class.subject AS subject, computer.name AS computer " +
-            "FROM student " +
-            "JOIN enrollment ON enrollment.studentId = student.id " +
-            "JOIN cw_class ON cw_class.id=enrollment.classId AND cw_class.TimeSlotId=:tsid " +
-            "JOIN computer ON computer.id=enrollment.computerId;")
-    fun getEnrollmentsAtTimeSlot(tsid:UUID):List<StudentCard>
+    @Query("SELECT enrollment.* " +
+            "FROM enrollment " +
+            "JOIN cw_class ON cw_class.id=enrollment.classId " +
+            "WHERE cw_class.TimeSlotId=:tsid;")
+    fun getEnrollmentsAtTimeSlot(tsid:UUID):List<Enrolment>
 
     @Query("SELECT computer.id, computer.name,computer.notes, computer.flags FROM computer " +
             "INNER JOIN cw_class,time_slot,enrollment " +
@@ -146,6 +153,18 @@ interface CCSDAO{
 
     @Query("DELETE FROM time_slot WHERE time_slot.id=:tsid")
     fun deleteTimeSlotById(tsid:UUID)
+
+    @Delete
+    fun deleteEnrollment(enrollment: Enrolment)
+
+    @Query("SELECT cw_class.* FROM cw_class WHERE cw_class.id = :id")
+    fun getClassById(id:UUID):CWClass
+
+    @Query("SELECT computer.* FROM computer WHERE computer.id = :id")
+    fun getComputerById(id:UUID):Computer
+
+    @Query("SELECT student.* FROM student WHERE student.id = :id")
+    fun getStudentById(id:UUID):Student
 }
 
 @Database(entities=arrayOf(Computer::class,Student::class,CWClass::class,Enrolment::class,TimeSlot::class),version=2)
@@ -177,16 +196,39 @@ class DataService() {
     }
     fun getTimeSlotViewData():List<TimeSlotViewData>{
         val data = dao.getAllTimeSlots().map{timeSlot->
+
+
+            val enrollments = dao.getEnrollmentsAtTimeSlot(timeSlot.id)
             TimeSlotViewData(
                 timeSlot=timeSlot,
-                students = dao.getEnrollmentsAtTimeSlot(timeSlot.id)
+                students = enrollments.map{
+                    StudentCard(
+                        name = dao.getStudentById(it.studentId).name,
+                        subject = dao.getClassById(it.classId).subject,
+                        computer = dao.getComputerById(it.computerId).name,
+                        enrollment = it
+                    )
+                }
             )
         }
-
         return data
     }
 
-    fun getTimeSlot(id:UUID):TimeSlot{
+    fun deleteEnrollment(enrollment:Enrolment){
+        dao.deleteEnrollment(enrollment)
+    }
+
+    fun getClassFromId(id:UUID):CWClass?{
+        return dao.getClassById(id)
+    }
+    fun getStudentFromId(id:UUID):Student?{
+        return dao.getStudentById(id)
+    }
+    fun getComputerFromId(id:UUID):Computer?{
+        return dao.getComputerById(id)
+    }
+
+    fun getTimeSlotFromId(id:UUID):TimeSlot{
         return dao.getTimeSlotById(id)?:TimeSlot.NONE
     }
 
