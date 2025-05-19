@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
-import doucette.marcus.codewizcomputerscheduler.ui.theme.CodewizComputerSchedulerTheme
+import doucette.marcus.codewizcomputerscheduler.ui.theme.ComputerSchedulerTheme
 import java.time.DayOfWeek
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
@@ -48,7 +48,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import doucette.marcus.codewizcomputerscheduler.data.Enrolment
-import java.sql.Time
 import java.util.UUID
 
 
@@ -284,7 +283,7 @@ fun DumbNewEnrollmentPopup(action:(NewEnrollmentAction)->Unit, state:NewEnrollme
 @Preview
 @Composable
 private fun NewEnrolmentPopupPreview() {
-    CodewizComputerSchedulerTheme {
+    ComputerSchedulerTheme {
         DumbNewEnrollmentPopup({}, NewEnrollmentState(
             TimeSlot(
                 UUID.randomUUID(),

@@ -1,13 +1,12 @@
 package doucette.marcus.codewizcomputerscheduler
 
-import android.app.Application
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import doucette.marcus.codewizcomputerscheduler.ui.TimeSlotView.TimeSlotView
-import doucette.marcus.codewizcomputerscheduler.ui.theme.CodewizComputerSchedulerTheme
+import doucette.marcus.codewizcomputerscheduler.ui.theme.ComputerSchedulerTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -25,7 +24,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            CodewizComputerSchedulerTheme {
+            ComputerSchedulerTheme {
                 TimeSlotView()
             }
         }

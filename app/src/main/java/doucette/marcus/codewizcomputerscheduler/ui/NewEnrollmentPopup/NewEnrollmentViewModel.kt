@@ -28,7 +28,7 @@ data class NewEnrollmentState(
     val allClasses: List<CWClass> = listOf(),
 ){
     companion object{
-        suspend fun from(timeSlot:TimeSlot,enrollment:Enrolment):NewEnrollmentState{
+        fun from(timeSlot:TimeSlot,enrollment:Enrolment):NewEnrollmentState{
             val ds = DataService.get()
             val currentClass = ds.getClassFromId(enrollment.classId)
             val student = ds.getStudentFromId(enrollment.studentId)
@@ -94,7 +94,7 @@ class NewEnrollmentViewModel(): ViewModel(){
         reaffirm(timeSlotId,cancelAction)
     }
     constructor(enrollment: Enrolment,timeSlot:TimeSlot,action:()->Unit) : this() {
-        viewModelScope.launch (Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO) {
             timeSlotId = timeSlot.id
             cancelAction = action
             _state.update{

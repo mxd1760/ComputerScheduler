@@ -52,7 +52,7 @@ import doucette.marcus.codewizcomputerscheduler.data.StudentCard
 import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
 import doucette.marcus.codewizcomputerscheduler.ui.NewEnrollmentPopup.EditEnrollmentPopup
 import doucette.marcus.codewizcomputerscheduler.ui.NewEnrollmentPopup.NewEnrollmentPopup
-import doucette.marcus.codewizcomputerscheduler.ui.theme.CodewizComputerSchedulerTheme
+import doucette.marcus.codewizcomputerscheduler.ui.theme.ComputerSchedulerTheme
 import java.time.DayOfWeek
 import java.util.UUID
 
@@ -255,7 +255,7 @@ fun ClassEntryView(action: (TimeSlotViewAction) -> Unit,
 @Preview
 @Composable
 private fun ClassPreview() {
-    CodewizComputerSchedulerTheme {
+    ComputerSchedulerTheme {
         DumbTimeSlotView({},TimeSlotState(
             listOf(
                 TimeSlotViewData(
