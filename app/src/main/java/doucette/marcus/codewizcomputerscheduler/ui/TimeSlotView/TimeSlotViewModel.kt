@@ -4,6 +4,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import doucette.marcus.codewizcomputerscheduler.data.DataService
+import doucette.marcus.codewizcomputerscheduler.data.Enrolment
 import doucette.marcus.codewizcomputerscheduler.data.StudentCard
 import doucette.marcus.codewizcomputerscheduler.data.TimeSlot
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +18,8 @@ import java.time.DayOfWeek
 data class TimeSlotState(
     val timeSlots:List<TimeSlotViewData>,
     val listState:LazyListState=LazyListState(Int.MAX_VALUE / 2),
-    val currentPopup:TSPopupType=TSPopupType.NONE
+    val currentPopup:TSPopupType=TSPopupType.NONE,
+    val selectedEnrollment: Enrolment? = null
 )
 
 enum class TSPopupType{
@@ -44,7 +46,7 @@ sealed interface TimeSlotViewAction{
     data class SetTSI(val newIndex:Int): TimeSlotViewAction
     data object OpenSettings: TimeSlotViewAction
     data object AddStudent: TimeSlotViewAction
-    data class EditStudent(val index:Int):TimeSlotViewAction
+    data class EditStudent(val enrollment:Enrolment):TimeSlotViewAction
     data object ClosePopup:TimeSlotViewAction
     data object OpenNewTimeSlotPopup : TimeSlotViewAction
 
@@ -95,7 +97,14 @@ class TimeSlotViewModel: ViewModel() {
                 }
             }
 
-            is TimeSlotViewAction.EditStudent -> TODO()
+            is TimeSlotViewAction.EditStudent ->{
+                _state.update{old->
+                    old.copy(
+                        selectedEnrollment = action.enrollment,
+                        currentPopup = TSPopupType.EDIT_ENROLLMENT
+                    )
+                }
+            }
             is TimeSlotViewAction.AddTimeSlot ->{
                 viewModelScope.launch(Dispatchers.IO){
                     ds.createTimeSlot(action.day,action.time)

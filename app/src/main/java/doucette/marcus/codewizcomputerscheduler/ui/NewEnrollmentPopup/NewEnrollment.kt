@@ -40,7 +40,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,23 +47,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import doucette.marcus.codewizcomputerscheduler.data.Enrolment
+import java.sql.Time
 import java.util.UUID
 
 
 @Composable
-fun NewEnrolmentPopup(tsId:UUID, closePopup:()->Unit,  modifier: Modifier = Modifier) {
-    val vm:NewEnrolmentViewModel = viewModel(factory=NewEnrolmentViewModelFactory(tsId, closePopup))
+fun NewEnrollmentPopup(tsId:UUID, closePopup:()->Unit, modifier: Modifier = Modifier) {
+    val vm:NewEnrollmentViewModel = viewModel(factory=NewEnrollmentViewModelFactory(tsId, closePopup))
     LaunchedEffect(tsId){
         vm.reaffirm(tsId,closePopup)
     }
     val state by vm.state.collectAsStateWithLifecycle()
-    DumbNewEnrolmentPopup(vm::ActionHandler,state,modifier=modifier)
+    DumbNewEnrollmentPopup(vm::ActionHandler,state,modifier=modifier)
+}
+
+@Composable
+fun EditEnrollmentPopup(enrollment: Enrolment,time_slot:TimeSlot,closePopup: () -> Unit, modifier: Modifier = Modifier) {
+    val vm:NewEnrollmentViewModel = viewModel(factory=EditEnrollmentViewModelFactory(enrollment,time_slot,closePopup))
+    LaunchedEffect(time_slot.id){
+        vm.reaffirm(enrollment,time_slot,closePopup)
+    }
+    val state by vm.state.collectAsStateWithLifecycle()
+    DumbNewEnrollmentPopup(vm::ActionHandler,state,modifier=modifier)
 }
 
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentState,  modifier: Modifier = Modifier) {
+fun DumbNewEnrollmentPopup(action:(NewEnrollmentAction)->Unit, state:NewEnrollmentState, modifier: Modifier = Modifier) {
     Box(modifier=Modifier.fillMaxSize()){
         val curDns = LocalDensity.current
         Column(modifier=modifier
@@ -101,7 +112,7 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                 ItemPicker("Student: ",
                     state.student?.name,
                     state.allStudents.map{Pair(it.name,Color.Green)},
-                    {action(NewEnrolmentAction.ChangeStudent(state.allStudents[it]))}
+                    {action(NewEnrollmentAction.ChangeStudent(state.allStudents[it]))}
                 ){ ret->
 
                     Dialog(
@@ -109,12 +120,12 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                     ){
                         var name by remember{mutableStateOf("")}
                         val submit = {
-                            action(NewEnrolmentAction.CreateStudent(name))
+                            action(NewEnrollmentAction.CreateStudent(name))
                             ret()
                         }
                         Column(
                             modifier=Modifier
-                                .size(height = 400.dp,width=250.dp)
+                                .size(height = 400.dp, width = 250.dp)
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(Color.Blue)
                                 .padding(20.dp),
@@ -150,18 +161,18 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                             ComputerAvailability.Adjacent -> Color.Yellow
                         }
                     )},
-                    {action(NewEnrolmentAction.ChangeComputer(state.relevantComputers[it]))}){ret->
+                    {action(NewEnrollmentAction.ChangeComputer(state.relevantComputers[it]))}){ ret->
                     Dialog(
                         onDismissRequest = ret
                     ){
                         var name by remember{mutableStateOf("")}
                         val submit = {
-                            action(NewEnrolmentAction.CreateComputer(name))
+                            action(NewEnrollmentAction.CreateComputer(name))
                             ret()
                         }
                         Column(
                             modifier=Modifier
-                                .size(height = 400.dp,width=250.dp)
+                                .size(height = 400.dp, width = 250.dp)
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(Color.Blue)
                                 .padding(20.dp),
@@ -192,18 +203,18 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                 ItemPicker("Class: ",
                     state.currentClass?.subject,
                     state.allClasses.map{Pair(it.subject,Color.Green)},
-                    {action(NewEnrolmentAction.ChangeClass(state.allClasses[it]))}){ret->
+                    {action(NewEnrollmentAction.ChangeClass(state.allClasses[it]))}){ ret->
                     Dialog(
                         onDismissRequest = ret
                     ){
                         var name by remember{mutableStateOf("")}
                         val submit = {
-                            action(NewEnrolmentAction.CreateClass(name))
+                            action(NewEnrollmentAction.CreateClass(name))
                             ret()
                         }
                         Column(
                             modifier=Modifier
-                                .size(height = 400.dp,width=250.dp)
+                                .size(height = 400.dp, width = 250.dp)
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(Color.Blue)
                                 .padding(20.dp),
@@ -237,7 +248,7 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                     .fillMaxWidth()
             ){
                 Button(
-                    onClick={action(NewEnrolmentAction.Cancel)},
+                    onClick={action(NewEnrollmentAction.Cancel)},
                     colors= ButtonColors(
                         containerColor = Color.Red,
                         contentColor = Color.Black,
@@ -251,7 +262,7 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                     Text("Cancel")
                 }
                 Button(
-                    onClick={action(NewEnrolmentAction.Submit)},
+                    onClick={action(NewEnrollmentAction.Submit)},
                     colors=ButtonColors(
                         containerColor = Color.Green,
                         contentColor = Color.Black,
@@ -262,7 +273,7 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
                         .weight(1f)
                         .height(100.dp)
                 ){
-                    Text("Submit")
+                    Text(state.prev_enrollment?.let{"Update"}?:"Submit")
                 }
             }
         }
@@ -274,7 +285,7 @@ fun DumbNewEnrolmentPopup(action:(NewEnrolmentAction)->Unit,state:NewEnrolmentSt
 @Composable
 private fun NewEnrolmentPopupPreview() {
     CodewizComputerSchedulerTheme {
-        DumbNewEnrolmentPopup({}, NewEnrolmentState(
+        DumbNewEnrollmentPopup({}, NewEnrollmentState(
             TimeSlot(
                 UUID.randomUUID(),
                 DayOfWeek.MONDAY,
@@ -312,14 +323,16 @@ fun ItemPicker(text:String,
            onDismissRequest = {show_popup=false}
        ){
            Column(modifier=Modifier
-               .size(height = 400.dp,width=250.dp)
+               .size(height = 400.dp, width = 250.dp)
                .clip(RoundedCornerShape(20.dp))
                .background(Color.Cyan)
                .padding(20.dp),
                horizontalAlignment = Alignment.CenterHorizontally
            ){
                LazyColumn(
-                   modifier=Modifier.weight(1f).fillMaxWidth(),
+                   modifier=Modifier
+                       .weight(1f)
+                       .fillMaxWidth(),
                    horizontalAlignment = Alignment.CenterHorizontally
                ){
                    items(options.size){
@@ -349,6 +362,9 @@ fun ItemPicker(text:String,
        }
     }
     if (show_create_popup){
-        createComposable{show_create_popup=false}
+        createComposable{
+            show_create_popup=false
+            show_popup = false
+        }
     }
 }
