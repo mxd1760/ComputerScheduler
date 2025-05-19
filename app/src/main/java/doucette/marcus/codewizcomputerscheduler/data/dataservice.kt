@@ -135,6 +135,17 @@ interface CCSDAO{
             "enrollment.classId=cw_class.id AND " +
             "cw_class.timeSlotId=:timeSlotId); ")
     fun getAllStudentsNotAtTimeslot(timeSlotId: UUID):List<Student>
+
+    @Query("DELETE FROM enrollment WHERE enrollment.classId IN "+
+            "(SELECT cw_class.id FROM cw_class " +
+            "WHERE cw_class.timeSlotId=:tsid); ")
+    fun deleteEnrolmentsByTSID(tsid:UUID)
+
+    @Query("DELETE FROM cw_class WHERE cw_class.timeSlotId=:tsid;")
+    fun deleteClassByTSID(tsid:UUID)
+
+    @Query("DELETE FROM time_slot WHERE time_slot.id=:tsid")
+    fun deleteTimeSlotById(tsid:UUID)
 }
 
 @Database(entities=arrayOf(Computer::class,Student::class,CWClass::class,Enrolment::class,TimeSlot::class),version=2)
@@ -235,6 +246,12 @@ class DataService() {
 
     fun addEnrollment(studentId: UUID,computerId: UUID,classId: UUID){
         dao.insertEnrolment(Enrolment(studentId,classId,computerId))
+    }
+
+    fun deleteTimeSlot(tsid:UUID){
+        dao.deleteEnrolmentsByTSID(tsid)
+        dao.deleteClassByTSID(tsid)
+        dao.deleteTimeSlotById(tsid)
     }
 
 }

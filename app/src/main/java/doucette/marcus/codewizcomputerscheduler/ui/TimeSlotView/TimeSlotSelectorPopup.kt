@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.DropdownMenu
@@ -25,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -36,7 +39,9 @@ import java.time.DayOfWeek
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TimeSlotSelectorPopup(action:(TimeSlotViewAction)->Unit, state: TimeSlotState, modifier: Modifier = Modifier) {
-    var showpopup by remember{mutableStateOf(false)}
+    var showMakeNewPopup by remember{mutableStateOf(false)}
+    var showDeletePopup by remember{mutableStateOf(false)}
+    var deletableTimeSlotIndex by remember{mutableStateOf(0)}
     Box(
         modifier=Modifier
             .fillMaxSize()
@@ -54,15 +59,33 @@ fun TimeSlotSelectorPopup(action:(TimeSlotViewAction)->Unit, state: TimeSlotStat
                     modifier=Modifier.weight(1f).fillMaxWidth()
                 ){
                     items(state.timeSlots.size){index->
-                        Text(state.timeSlots[index].LabelString(),
-                            modifier=Modifier.combinedClickable {
-                                action(TimeSlotViewAction.SetTSI(index))
-                        }, fontSize = 30.sp)
+                        Row {
+                            Text(
+                                state.timeSlots[index].LabelString(),
+                                modifier = Modifier.combinedClickable {
+                                    action(TimeSlotViewAction.SetTSI(index))
+                                }, fontSize = 30.sp
+                            )
+                            Button(
+                                onClick={
+                                    deletableTimeSlotIndex=index
+                                    showDeletePopup=true
+                                        },
+                                colors=ButtonColors(
+                                    containerColor = Color.Red,
+                                    contentColor = Color.Black,
+                                    disabledContainerColor = Color.Black,
+                                    disabledContentColor = Color.Black
+                                )
+                            ){
+                                Text("x")
+                            }
+                        }
                     }
                     item{
                         Button(
                             onClick={
-                                showpopup = true
+                                showMakeNewPopup = true
                             }){
                             Text("Add Time Slot")
                         }
@@ -74,7 +97,7 @@ fun TimeSlotSelectorPopup(action:(TimeSlotViewAction)->Unit, state: TimeSlotStat
             }
         }
     }
-    if (showpopup){
+    if (showMakeNewPopup){
 
         var tempDay by remember{mutableStateOf(DayOfWeek.MONDAY)}
         var tempTime by remember{mutableStateOf(8)}
@@ -98,7 +121,7 @@ fun TimeSlotSelectorPopup(action:(TimeSlotViewAction)->Unit, state: TimeSlotStat
                     modifier=Modifier.width(POPUP_WIDTH)
                 ) {
                     Button(
-                        onClick = { showpopup = false },
+                        onClick = { showMakeNewPopup = false },
                         colors = ButtonColors(
                             contentColor = Color.Black,
                             disabledContainerColor = Color.Black,
@@ -111,7 +134,7 @@ fun TimeSlotSelectorPopup(action:(TimeSlotViewAction)->Unit, state: TimeSlotStat
                     Button(
                         onClick = {
                             action(TimeSlotViewAction.AddTimeSlot(tempDay, tempTime))
-                            showpopup = false
+                            showMakeNewPopup = false
                         },
                         colors = ButtonColors(
                             contentColor = Color.Black,
@@ -126,6 +149,46 @@ fun TimeSlotSelectorPopup(action:(TimeSlotViewAction)->Unit, state: TimeSlotStat
             }
         }
     }
+    if (showDeletePopup){
+        Dialog(
+            onDismissRequest = {showDeletePopup=false},
+        ){
+            Column(modifier=Modifier.clip(RoundedCornerShape(size=30.dp)).background(Color.Yellow).padding(20.dp)) {
+                Text("Are you sure you want to delete the ${state.timeSlots[deletableTimeSlotIndex].LabelString()} time slot",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 30.sp
+                )
+                Row {
+                    Button(
+                        onClick = { showDeletePopup = false },
+                        colors = ButtonColors(
+                            containerColor = Color.White,
+                            contentColor = Color.Black,
+                            disabledContainerColor = Color.Black,
+                            disabledContentColor = Color.Black
+                        )
+                    ) {
+                        Text("Cancel")
+                    }
+                    Button(
+                        onClick = {
+                            action(TimeSlotViewAction.DeleteTimeSlot(state.timeSlots[deletableTimeSlotIndex]))
+                            showDeletePopup=false
+                                  },
+                        colors = ButtonColors(
+                            containerColor = Color.Red,
+                            contentColor = Color.White,
+                            disabledContainerColor = Color.Black,
+                            disabledContentColor = Color.Black
+                        )
+                    ) {
+                        Text("Delete")
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 
